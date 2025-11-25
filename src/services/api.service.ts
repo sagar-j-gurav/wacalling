@@ -119,6 +119,23 @@ class ApiService {
   }
 
   /**
+   * Get Twilio access token for WebRTC
+   */
+  async getAccessToken(identity?: string): Promise<ApiResponse<{ token: string; identity: string }>> {
+    try {
+      const response = await this.client.get<ApiResponse<{ token: string; identity: string }>>(
+        '/wacall/api/token',
+        { params: { identity } }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get access token:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Grant permission manually (for testing)
    */
   async grantPermission(phoneNumber: string): Promise<void> {

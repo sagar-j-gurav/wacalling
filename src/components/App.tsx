@@ -8,6 +8,7 @@ import { useHubSpot } from '../hooks/useHubSpot';
 import { usePermission } from '../hooks/usePermission';
 import { useCallTimer } from '../hooks/useCallTimer';
 import websocketService from '../services/websocket.service';
+import webrtcService from '../services/webrtc.service';
 import apiService from '../services/api.service';
 import { generateCallId, cleanPhoneNumber } from '../utils/formatters';
 import { storage } from '../utils/storage';
@@ -196,6 +197,85 @@ export const App: React.FC = () => {
       websocketService.disconnect();
     };
   }, [hubspot.isLoggedIn, hubspot.userId, hubspot.notifyIncomingCall, hubspot.callAnswered, state.callSid]);
+
+  /**
+   * Initialize WebRTC Device
+   */
+  useEffect(() => {
+    let initialized = false;
+
+    const initWebRTC = async () => {
+      if (!hubspot.isLoggedIn || initialized) return;
+
+      try {
+        console.log('🎤 Initializing WebRTC Device...');
+        const identity = hubspot.userId ? `hubspot_${hubspot.userId}` : undefined;
+        await webrtcService.initialize(identity);
+
+        // Setup call status callback
+        webrtcService.onCallStatus((event) => {
+          console.log('📞 WebRTC Call Status:', event.status);
+
+          switch (event.status) {
+            case 'connecting':
+              // Already handled by initiateCall
+              break;
+
+            case 'ringing':
+              // Call is ringing (contact's phone)
+              setState((prev) => ({
+                ...prev,
+                currentScreen: 'CALLING',
+              }));
+              break;
+
+            case 'connected':
+              // Call connected - both parties can talk
+              timer.start();
+              hubspot.callAnswered();
+              break;
+
+            case 'ended':
+              // Call ended
+              timer.stop();
+              setState((prev) => ({
+                ...prev,
+                currentScreen: 'CALL_ENDED',
+                callEndStatus: 'COMPLETED',
+                isCallActive: false,
+              }));
+              hubspot.callEnded();
+              break;
+
+            case 'error':
+              // Call error
+              console.error('WebRTC Call Error:', event.error);
+              timer.stop();
+              setState((prev) => ({
+                ...prev,
+                currentScreen: 'CALL_ENDED',
+                callEndStatus: 'FAILED',
+                error: event.error?.message || 'Call failed',
+                isCallActive: false,
+              }));
+              hubspot.callEnded();
+              break;
+          }
+        });
+
+        initialized = true;
+        console.log('✅ WebRTC Device initialized');
+      } catch (error) {
+        console.error('❌ Failed to initialize WebRTC:', error);
+      }
+    };
+
+    initWebRTC();
+
+    return () => {
+      webrtcService.destroy();
+    };
+  }, [hubspot.isLoggedIn, hubspot.userId, hubspot, timer]);
 
   /**
    * Handle user login
@@ -474,6 +554,8 @@ export const App: React.FC = () => {
         callDirection: 'outbound',
         callStartTime: Date.now(),
         contactId,
+        contactName: state.contactName,
+        phoneNumber,
         isCallActive: true,
       }));
 
@@ -486,38 +568,32 @@ export const App: React.FC = () => {
           createEngagement: true,
         });
 
-        // Call backend API to initiate call
-        const response = await apiService.initiateCall({
-          phoneNumber,
-          contactId,
-        });
+        // Initiate WebRTC call
+        console.log('📞 Starting WebRTC call to:', phoneNumber);
+        const call = await webrtcService.makeCall(phoneNumber);
 
-        if (response.success) {
-          // Update with actual call SID and engagement ID from backend
-          setState((prev) => ({
-            ...prev,
-            currentScreen: 'CALLING',
-            callSid: response.data?.callSid || callId,
-            engagementId: response.data?.engagementId,
-          }));
-          // Don't call hubspot.callAnswered() here - wait for Twilio status update
-          timer.start();
-        } else {
-          throw new Error(response.error || 'Failed to initiate call');
-        }
+        // Update with actual call SID
+        setState((prev) => ({
+          ...prev,
+          callSid: call.parameters.CallSid || callId,
+        }));
+
+        console.log('✅ WebRTC call initiated:', call.parameters.CallSid);
+        // Note: Call status updates are handled by WebRTC event listener
       } catch (error: any) {
-        console.error('Error initiating call:', error);
+        console.error('❌ Error initiating WebRTC call:', error);
         setState((prev) => ({
           ...prev,
           currentScreen: 'CALL_ENDED',
           callEndStatus: 'FAILED',
-          error: error.response?.data?.error || 'Failed to initiate call',
+          error: error.message || 'Failed to initiate call',
           isCallActive: false,
         }));
         timer.stop();
+        hubspot.callEnded();
       }
     },
-    [hubspot, timer]
+    [hubspot, timer, state.contactName]
   );
 
   /**
@@ -568,28 +644,17 @@ export const App: React.FC = () => {
    * End active call
    */
   const handleEndCall = useCallback(async () => {
-    if (!state.callSid || !state.engagementId) return;
-
     try {
-      const callEndStatus: CallEndStatus = 'COMPLETED';
+      console.log('📞 Ending call...');
 
-      await apiService.endCall(state.callSid, callEndStatus);
+      // End WebRTC call
+      webrtcService.endCall();
 
-      hubspot.callEnded({
-        externalCallId: state.callSid,
-        engagementId: state.engagementId,
-        callEndStatus,
-      });
-      timer.stop();
-
-      setState((prev) => ({
-        ...prev,
-        currentScreen: 'CALL_ENDED',
-        callEndStatus,
-        isCallActive: false,
-      }));
+      // Note: Call end status update is handled by WebRTC event listener
+      // which will update the UI and notify HubSpot
     } catch (error) {
       console.error('Error ending call:', error);
+      timer.stop();
       setState((prev) => ({
         ...prev,
         currentScreen: 'CALL_ENDED',
@@ -597,7 +662,7 @@ export const App: React.FC = () => {
         isCallActive: false,
       }));
     }
-  }, [state.callSid, hubspot, timer]);
+  }, [timer]);
 
   /**
    * Save call notes and close

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@hubspot/calling-extensions-sdk": "^0.9.7",
+    "@twilio/voice-sdk": "^2.16.0",
     "axios": "^1.6.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
