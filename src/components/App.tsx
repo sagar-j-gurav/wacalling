@@ -196,9 +196,15 @@ export const App: React.FC = () => {
       console.log('✅ WhatsApp user answered the call:', data);
 
       setState((prev) => {
+        console.log('🔍 Comparing callSids:', {
+          eventCallSid: data.callSid,
+          stateCallSid: prev.callSid,
+          match: data.callSid === prev.callSid
+        });
+
         // Only process if this is our current call
         if (data.callSid !== prev.callSid) {
-          console.log('⚠️ Call answered event for different call, ignoring');
+          console.warn('⚠️ Call answered event for different call, ignoring');
           return prev;
         }
 
