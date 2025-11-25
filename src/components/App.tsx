@@ -647,11 +647,22 @@ export const App: React.FC = () => {
         console.log('📞 Starting WebRTC call to:', phoneNumber);
         const call = await webrtcService.makeCall(phoneNumber);
 
+        console.log('🔍 Call object received:', {
+          hasCallSid: !!call.parameters.CallSid,
+          callSid: call.parameters.CallSid,
+          localCallId: callId,
+          willUse: call.parameters.CallSid || callId,
+        });
+
         // Update with actual call SID
-        setState((prev) => ({
-          ...prev,
-          callSid: call.parameters.CallSid || callId,
-        }));
+        setState((prev) => {
+          const newCallSid = call.parameters.CallSid || callId;
+          console.log('🔄 Updating callSid from', prev.callSid, 'to', newCallSid);
+          return {
+            ...prev,
+            callSid: newCallSid,
+          };
+        });
 
         console.log('✅ WebRTC call initiated:', call.parameters.CallSid);
         // Note: Call status updates are handled by WebRTC event listener
