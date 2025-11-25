@@ -162,6 +162,9 @@ export const App: React.FC = () => {
     console.log('🔌 Connecting to WebSocket for incoming calls...');
     websocketService.connect(hubspot.userId.toString());
 
+    let durationInterval: NodeJS.Timeout | null = null;
+    let callAnsweredTime: number = 0;
+
     const unsubscribeIncoming = websocketService.onIncomingCall((data: IncomingCallData) => {
       console.log('📥 Incoming call received:', data);
 
@@ -216,6 +219,25 @@ export const App: React.FC = () => {
           hubspot.callAnswered(prev.callSid);
         }
 
+        // Start duration timer
+        callAnsweredTime = Date.now();
+
+        // Clear any existing interval
+        if (durationInterval) {
+          clearInterval(durationInterval);
+        }
+
+        // Update duration immediately (0:00)
+        setState((p) => ({ ...p, callDuration: 0 }));
+
+        // Start interval to update duration every second
+        durationInterval = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - callAnsweredTime) / 1000);
+          setState((p) => ({ ...p, callDuration: elapsed }));
+        }, 1000);
+
+        console.log('⏱️ Duration timer started');
+
         return {
           ...prev,
           isCallConnected: true, // NOW show "Connected"!
@@ -229,6 +251,11 @@ export const App: React.FC = () => {
       unsubscribeStatus();
       unsubscribeAnswered();
       websocketService.disconnect();
+
+      // Clean up duration timer
+      if (durationInterval) {
+        clearInterval(durationInterval);
+      }
     };
   }, [hubspot.isLoggedIn, hubspot.userId, hubspot.notifyIncomingCall, hubspot.callAnswered, state.callSid, timer]);
 
@@ -312,7 +339,7 @@ export const App: React.FC = () => {
                   currentScreen: 'CALL_ENDED',
                   callEndStatus: 'COMPLETED',
                   isCallActive: false,
-                  callDuration: event.duration || prev.callDuration, // Preserve final duration
+                  callDuration: prev.callDuration, // Keep the duration from our custom timer
                 };
               });
               break;
