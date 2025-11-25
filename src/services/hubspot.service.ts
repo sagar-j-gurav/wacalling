@@ -4,7 +4,7 @@
 
 import CallingExtensions from '@hubspot/calling-extensions-sdk';
 
-// Type definition for CallingExtensions instance
+// Type definition fr CallingExtensions instance
 type ICallingExtensions = InstanceType<typeof CallingExtensions>;
 import {
   HubSpotUserInfo,
