@@ -24,6 +24,7 @@ interface CallingScreenProps {
   onMute?: () => void;
   onUnmute?: () => void;
   isMuted?: boolean;
+  isConnected?: boolean; // true = connected, false = ringing
 }
 
 export const CallingScreen: React.FC<CallingScreenProps> = ({
@@ -34,6 +35,7 @@ export const CallingScreen: React.FC<CallingScreenProps> = ({
   onMute,
   onUnmute,
   isMuted = false,
+  isConnected = false,
 }) => {
   const [muted, setMuted] = useState(isMuted);
 
@@ -51,7 +53,9 @@ export const CallingScreen: React.FC<CallingScreenProps> = ({
       <Card>
         <Column gap={24}>
           <Column gap={12} style={{ alignItems: 'center' }}>
-            <Badge color="success">Connected</Badge>
+            <Badge color={isConnected ? "success" : "warning"}>
+              {isConnected ? "Connected" : "Ringing..."}
+            </Badge>
             <Text size={14} color="#7C98B6">
               WhatsApp Call
             </Text>

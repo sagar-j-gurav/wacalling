@@ -42,6 +42,7 @@ interface LocalAppState {
   contactId: string | undefined;
   contactName: string | undefined;
   isCallActive: boolean;
+  isCallConnected: boolean; // true = connected and can talk, false = ringing
   error: string | undefined;
   hasSeenGetStarted: boolean;
   callDuration: number; // Duration in seconds
@@ -69,6 +70,7 @@ export const App: React.FC = () => {
     contactId: undefined,
     contactName: undefined,
     isCallActive: false,
+    isCallConnected: false,
     error: undefined,
     hasSeenGetStarted: false,
     callDuration: 0,
@@ -177,6 +179,7 @@ export const App: React.FC = () => {
         contactId: data.contactId,
         contactName: data.contactName,
         engagementId: data.engagementId,
+        isCallConnected: false, // Not connected yet
         callDuration: 0, // Reset duration for new incoming call
       }));
     });
@@ -235,6 +238,7 @@ export const App: React.FC = () => {
               setState((prev) => ({
                 ...prev,
                 currentScreen: 'CALLING',
+                isCallConnected: false, // Ringing, not connected yet
               }));
               break;
 
@@ -251,6 +255,7 @@ export const App: React.FC = () => {
 
                 return {
                   ...prev,
+                  isCallConnected: true, // Now connected!
                   callDuration: event.duration || 0,
                 };
               });
@@ -605,6 +610,7 @@ export const App: React.FC = () => {
         contactName: state.contactName,
         phoneNumber,
         isCallActive: true,
+        isCallConnected: false, // Not connected yet
         callDuration: 0, // Reset duration for new call
       }));
 
@@ -880,6 +886,7 @@ export const App: React.FC = () => {
             contactName={state.contactName || undefined}
             duration={formatDuration(state.callDuration * 1000)}
             onEndCall={handleEndCall}
+            isConnected={state.isCallConnected}
           />
         );
 
