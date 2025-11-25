@@ -261,11 +261,22 @@ export const App: React.FC = () => {
 
             case 'ringing':
               // Call is ringing (contact's phone)
-              setState((prev) => ({
-                ...prev,
-                currentScreen: 'CALLING',
-                isCallConnected: false, // Ringing, not connected yet
-              }));
+              // Update callSid with actual Twilio CallSid (now available)
+              setState((prev) => {
+                const twilioCallSid = event.call?.parameters?.CallSid;
+                if (twilioCallSid && twilioCallSid !== prev.callSid) {
+                  console.log('🔄 Updating callSid on ringing:', {
+                    from: prev.callSid,
+                    to: twilioCallSid,
+                  });
+                }
+                return {
+                  ...prev,
+                  currentScreen: 'CALLING',
+                  isCallConnected: false, // Ringing, not connected yet
+                  callSid: twilioCallSid || prev.callSid, // Update with real CallSid
+                };
+              });
               break;
 
             case 'connected':
