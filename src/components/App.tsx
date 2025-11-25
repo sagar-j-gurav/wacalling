@@ -198,6 +198,7 @@ export const App: React.FC = () => {
     const unsubscribeAnswered = websocketService.onCallAnswered((data: any) => {
       console.log('✅ WhatsApp user answered the call:', data);
 
+      // Check callSid match first
       setState((prev) => {
         console.log('🔍 Comparing callSids:', {
           eventCallSid: data.callSid,
@@ -227,12 +228,10 @@ export const App: React.FC = () => {
           clearInterval(durationInterval);
         }
 
-        // Update duration immediately (0:00)
-        setState((p) => ({ ...p, callDuration: 0 }));
-
         // Start interval to update duration every second
         durationInterval = setInterval(() => {
           const elapsed = Math.floor((Date.now() - callAnsweredTime) / 1000);
+          console.log('⏱️ Updating duration:', elapsed);
           setState((p) => ({ ...p, callDuration: elapsed }));
         }, 1000);
 
@@ -257,7 +256,7 @@ export const App: React.FC = () => {
         clearInterval(durationInterval);
       }
     };
-  }, [hubspot.isLoggedIn, hubspot.userId, hubspot.notifyIncomingCall, hubspot.callAnswered, state.callSid, timer]);
+  }, [hubspot.isLoggedIn, hubspot.userId, hubspot.notifyIncomingCall, hubspot.callAnswered, timer]);
 
   /**
    * Initialize WebRTC Device
