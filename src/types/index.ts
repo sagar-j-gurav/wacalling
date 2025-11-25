@@ -72,6 +72,7 @@ export interface IncomingCallData {
   ownerEmail?: string;
   ownerName?: string;
   callStartTime: number;
+  engagementId?: number;
 }
 
 // ========== Screen Types ==========

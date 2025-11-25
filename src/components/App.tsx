@@ -10,7 +10,7 @@ import { useCallTimer } from '../hooks/useCallTimer';
 import websocketService from '../services/websocket.service';
 import webrtcService from '../services/webrtc.service';
 import apiService from '../services/api.service';
-import { generateCallId, cleanPhoneNumber } from '../utils/formatters';
+import { generateCallId, cleanPhoneNumber, formatDuration } from '../utils/formatters';
 import { storage } from '../utils/storage';
 import {
   ScreenType,
@@ -44,6 +44,7 @@ interface LocalAppState {
   isCallActive: boolean;
   error: string | undefined;
   hasSeenGetStarted: boolean;
+  callDuration: number; // Duration in seconds
 }
 
 export const App: React.FC = () => {
@@ -70,6 +71,7 @@ export const App: React.FC = () => {
     isCallActive: false,
     error: undefined,
     hasSeenGetStarted: false,
+    callDuration: 0,
   });
 
   // Keypad permission status state (separate from permission hook for display)
@@ -172,7 +174,10 @@ export const App: React.FC = () => {
         callSid: data.callSid,
         callDirection: 'inbound',
         callStartTime: data.callStartTime,
+        contactId: data.contactId,
         contactName: data.contactName,
+        engagementId: data.engagementId,
+        callDuration: 0, // Reset duration for new incoming call
       }));
     });
 
@@ -236,7 +241,19 @@ export const App: React.FC = () => {
             case 'connected':
               // Call connected - both parties can talk
               timer.start();
-              hubspot.callAnswered();
+
+              // Update call duration from WebRTC service and notify HubSpot
+              setState((prev) => {
+                // Notify HubSpot that call was answered
+                if (prev.callSid) {
+                  hubspot.callAnswered(prev.callSid);
+                }
+
+                return {
+                  ...prev,
+                  callDuration: event.duration || 0,
+                };
+              });
               break;
 
             case 'ended':
@@ -259,6 +276,7 @@ export const App: React.FC = () => {
                   currentScreen: 'CALL_ENDED',
                   callEndStatus: 'COMPLETED',
                   isCallActive: false,
+                  callDuration: event.duration || prev.callDuration, // Preserve final duration
                 };
               });
               break;
@@ -285,6 +303,7 @@ export const App: React.FC = () => {
                   callEndStatus: 'FAILED',
                   error: event.error?.message || 'Call failed',
                   isCallActive: false,
+                  callDuration: prev.callDuration, // Preserve duration on error
                 };
               });
               break;
@@ -586,6 +605,7 @@ export const App: React.FC = () => {
         contactName: state.contactName,
         phoneNumber,
         isCallActive: true,
+        callDuration: 0, // Reset duration for new call
       }));
 
       try {
@@ -611,15 +631,27 @@ export const App: React.FC = () => {
         // Note: Call status updates are handled by WebRTC event listener
       } catch (error: any) {
         console.error('❌ Error initiating WebRTC call:', error);
-        setState((prev) => ({
-          ...prev,
-          currentScreen: 'CALL_ENDED',
-          callEndStatus: 'FAILED',
-          error: error.message || 'Failed to initiate call',
-          isCallActive: false,
-        }));
+        setState((prev) => {
+          // Notify HubSpot of failed call if we have engagement data
+          if (prev.callSid && prev.engagementId) {
+            setTimeout(() => {
+              hubspot.callEnded({
+                externalCallId: prev.callSid!,
+                engagementId: prev.engagementId!,
+                callEndStatus: 'FAILED',
+              });
+            }, 100);
+          }
+
+          return {
+            ...prev,
+            currentScreen: 'CALL_ENDED',
+            callEndStatus: 'FAILED',
+            error: error.message || 'Failed to initiate call',
+            isCallActive: false,
+          };
+        });
         timer.stop();
-        hubspot.callEnded();
       }
     },
     [hubspot, timer, state.contactName]
@@ -701,7 +733,7 @@ export const App: React.FC = () => {
       // Save to HubSpot engagement
       const engagementProperties = {
         hs_call_body: notes,
-        hs_call_duration: timer.duration,
+        hs_call_duration: state.callDuration * 1000, // Convert seconds to milliseconds
         hs_call_status: state.callEndStatus || 'COMPLETED',
       };
 
@@ -846,7 +878,7 @@ export const App: React.FC = () => {
           <CallingScreen
             phoneNumber={state.phoneNumber || ''}
             contactName={state.contactName || undefined}
-            duration={timer.formattedDuration}
+            duration={formatDuration(state.callDuration * 1000)}
             onEndCall={handleEndCall}
           />
         );
@@ -856,7 +888,7 @@ export const App: React.FC = () => {
           <CallEndedScreen
             phoneNumber={state.phoneNumber || ''}
             contactName={state.contactName || undefined}
-            duration={timer.formattedDuration}
+            duration={formatDuration(state.callDuration * 1000)}
             callStatus={(state.callEndStatus || 'COMPLETED').toLowerCase() as 'completed' | 'missed' | 'rejected' | 'failed'}
             onSave={handleSaveCallNotes}
             onSkip={handleSkipNotes}

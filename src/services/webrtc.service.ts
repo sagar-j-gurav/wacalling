@@ -76,8 +76,20 @@ class WebRTCService {
     });
 
     this.device.on('incoming', (call) => {
-      console.log('📞 Incoming call:', call);
-      // Handle incoming calls if needed
+      console.log('📞 Incoming WebRTC call from Twilio:', call.parameters);
+
+      // Store incoming call
+      this.activeCall = call;
+
+      // Auto-accept the incoming call (user already accepted via UI)
+      call.accept();
+      console.log('✅ Auto-accepted incoming WebRTC call');
+
+      // Setup call listeners
+      this.setupCallListeners(call);
+
+      // Emit ringing status
+      this.emitCallStatus({ status: 'ringing', call });
     });
   }
 
