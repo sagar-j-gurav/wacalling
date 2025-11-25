@@ -202,15 +202,19 @@ export const App: React.FC = () => {
    * Initialize WebRTC Device
    */
   useEffect(() => {
-    let initialized = false;
+    if (!hubspot.isLoggedIn || !hubspot.userId) return;
+
+    let isActive = true;
 
     const initWebRTC = async () => {
-      if (!hubspot.isLoggedIn || initialized) return;
+      if (!isActive) return;
 
       try {
         console.log('🎤 Initializing WebRTC Device...');
-        const identity = hubspot.userId ? `hubspot_${hubspot.userId}` : undefined;
+        const identity = `hubspot_${hubspot.userId}`;
         await webrtcService.initialize(identity);
+
+        if (!isActive) return;
 
         // Setup call status callback
         webrtcService.onCallStatus((event) => {
@@ -236,34 +240,57 @@ export const App: React.FC = () => {
               break;
 
             case 'ended':
-              // Call ended
+              // Call ended - get callSid and engagementId from state
               timer.stop();
-              setState((prev) => ({
-                ...prev,
-                currentScreen: 'CALL_ENDED',
-                callEndStatus: 'COMPLETED',
-                isCallActive: false,
-              }));
-              hubspot.callEnded();
+              setState((prev) => {
+                // Call hubspot.callEnded with proper data
+                if (prev.callSid && prev.engagementId) {
+                  setTimeout(() => {
+                    hubspot.callEnded({
+                      externalCallId: prev.callSid!,
+                      engagementId: prev.engagementId!,
+                      callEndStatus: 'COMPLETED',
+                    });
+                  }, 100);
+                }
+
+                return {
+                  ...prev,
+                  currentScreen: 'CALL_ENDED',
+                  callEndStatus: 'COMPLETED',
+                  isCallActive: false,
+                };
+              });
               break;
 
             case 'error':
               // Call error
               console.error('WebRTC Call Error:', event.error);
               timer.stop();
-              setState((prev) => ({
-                ...prev,
-                currentScreen: 'CALL_ENDED',
-                callEndStatus: 'FAILED',
-                error: event.error?.message || 'Call failed',
-                isCallActive: false,
-              }));
-              hubspot.callEnded();
+              setState((prev) => {
+                // Call hubspot.callEnded with proper data
+                if (prev.callSid && prev.engagementId) {
+                  setTimeout(() => {
+                    hubspot.callEnded({
+                      externalCallId: prev.callSid!,
+                      engagementId: prev.engagementId!,
+                      callEndStatus: 'FAILED',
+                    });
+                  }, 100);
+                }
+
+                return {
+                  ...prev,
+                  currentScreen: 'CALL_ENDED',
+                  callEndStatus: 'FAILED',
+                  error: event.error?.message || 'Call failed',
+                  isCallActive: false,
+                };
+              });
               break;
           }
         });
 
-        initialized = true;
         console.log('✅ WebRTC Device initialized');
       } catch (error) {
         console.error('❌ Failed to initialize WebRTC:', error);
@@ -273,9 +300,11 @@ export const App: React.FC = () => {
     initWebRTC();
 
     return () => {
-      webrtcService.destroy();
+      console.log('🧹 Cleaning up WebRTC');
+      isActive = false;
+      webrtcService.destroy().catch(console.error);
     };
-  }, [hubspot.isLoggedIn, hubspot.userId, hubspot, timer]);
+  }, [hubspot.isLoggedIn, hubspot.userId]);
 
   /**
    * Handle user login
