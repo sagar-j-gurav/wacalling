@@ -48,7 +48,7 @@ class ApiService {
   ): Promise<PermissionRequestResponse> {
     try {
       const response = await this.client.post<ApiResponse<PermissionRequestResponse>>(
-        '/api/permissions/request',
+        '/wacall/api/permissions/request',
         { phoneNumber, hubspotContactId }
       );
 
@@ -81,7 +81,7 @@ class ApiService {
     try {
       const encodedNumber = encodeURIComponent(phoneNumber);
       const response = await this.client.get<ApiResponse<PermissionStatusResponse>>(
-        `/api/permissions/status/${encodedNumber}`
+        `/wacall/api/permissions/status/${encodedNumber}`
       );
 
       return response.data.data || {
@@ -105,7 +105,7 @@ class ApiService {
   async validatePermission(phoneNumber: string): Promise<PermissionCheckResult> {
     try {
       const response = await this.client.post<ApiResponse<PermissionCheckResult>>(
-        '/api/permissions/validate',
+        '/wacall/api/permissions/validate',
         { phoneNumber }
       );
 
@@ -122,14 +122,14 @@ class ApiService {
    * Grant permission manually (for testing)
    */
   async grantPermission(phoneNumber: string): Promise<void> {
-    await this.client.post('/api/permissions/grant', { phoneNumber });
+    await this.client.post('/wacall/api/permissions/grant', { phoneNumber });
   }
 
   /**
    * Revoke permission
    */
   async revokePermission(phoneNumber: string): Promise<void> {
-    await this.client.post('/api/permissions/revoke', { phoneNumber });
+    await this.client.post('/wacall/api/permissions/revoke', { phoneNumber });
   }
 
   /**
@@ -141,7 +141,7 @@ class ApiService {
   }): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
       const response = await this.client.post<ApiResponse>(
-        '/api/calls/initiate',
+        '/wacall/api/calls/initiate',
         {
           phoneNumber: data.phoneNumber,
           hubspotContactId: data.contactId,
@@ -183,7 +183,7 @@ class ApiService {
    */
   async endCall(callSid: string, status?: string): Promise<void> {
     try {
-      await this.client.post('/api/calls/end', { callSid, status });
+      await this.client.post('/wacall/api/calls/end', { callSid, status });
     } catch (error) {
       console.error('Failed to end call:', error);
     }
