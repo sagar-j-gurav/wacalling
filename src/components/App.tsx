@@ -737,23 +737,32 @@ export const App: React.FC = () => {
   const handleAcceptIncomingCall = useCallback(() => {
     if (!state.callSid || !state.engagementId) return;
 
+    console.log('👍 Owner accepting incoming call...');
+
+    // Accept the WebRTC call
+    webrtcService.acceptIncomingCall();
+
     setState((prev) => ({
       ...prev,
       currentScreen: 'CALLING',
       isCallActive: true,
+      isCallConnected: false, // Not yet connected - ringing WhatsApp user
     }));
 
-    // Don't call hubspot.callAnswered() here - wait for Twilio status update
-    timer.start();
-
-    // Note: Twilio handles the actual call connection via webhook
-  }, [state.callSid, state.engagementId, hubspot, timer]);
+    // Note: Don't call hubspot.callAnswered() here - wait for WhatsApp user to pick up
+    // The call_answered WebSocket event will trigger when that happens
+  }, [state.callSid, state.engagementId]);
 
   /**
    * Handle incoming call reject
    */
   const handleRejectIncomingCall = useCallback(async () => {
     if (!state.callSid || !state.engagementId) return;
+
+    console.log('👎 Owner rejecting incoming call...');
+
+    // Reject the WebRTC call
+    webrtcService.rejectIncomingCall();
 
     try {
       await apiService.endCall(state.callSid, 'rejected');

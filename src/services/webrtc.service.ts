@@ -81,15 +81,12 @@ class WebRTCService {
       // Store incoming call
       this.activeCall = call;
 
-      // Auto-accept the incoming call (user already accepted via UI)
-      call.accept();
-      console.log('✅ Auto-accepted incoming WebRTC call');
-
-      // Setup call listeners
+      // Setup call listeners (before accepting)
       this.setupCallListeners(call);
 
-      // Emit ringing status
+      // Emit ringing status - UI will show Accept/Reject buttons
       this.emitCallStatus({ status: 'ringing', call });
+      console.log('📞 Incoming call ready - waiting for user to accept');
     });
   }
 
@@ -218,6 +215,31 @@ class WebRTCService {
     if (this.callDurationInterval) {
       clearInterval(this.callDurationInterval);
       this.callDurationInterval = null;
+    }
+  }
+
+  /**
+   * Accept an incoming call
+   */
+  acceptIncomingCall(): void {
+    if (this.activeCall) {
+      console.log('✅ Accepting incoming call...');
+      this.activeCall.accept();
+    } else {
+      console.error('❌ No incoming call to accept');
+    }
+  }
+
+  /**
+   * Reject an incoming call
+   */
+  rejectIncomingCall(): void {
+    if (this.activeCall) {
+      console.log('❌ Rejecting incoming call...');
+      this.activeCall.reject();
+      this.activeCall = null;
+    } else {
+      console.error('❌ No incoming call to reject');
     }
   }
 
