@@ -2,7 +2,7 @@
  * Main Application Component
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Container, Header, Title } from './StyledComponents';
 import { useHubSpot } from '../hooks/useHubSpot';
 import { usePermission } from '../hooks/usePermission';
@@ -80,6 +80,43 @@ export const App: React.FC = () => {
   const [keypadPermissionStatus, setKeypadPermissionStatus] = useState<
     'granted' | 'pending' | 'denied' | 'not_requested' | 'checking' | null
   >(null);
+
+  // Refs for duration timer (shared between WebSocket and WebRTC useEffects)
+  const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const callAnsweredTimeRef = useRef<number>(0);
+
+  /**
+   * Start duration timer (shared function for both incoming and outbound calls)
+   */
+  const startDurationTimer = useCallback((callSid: string) => {
+    console.log('⏱️ Starting duration timer for call:', callSid);
+    callAnsweredTimeRef.current = Date.now();
+
+    // Clear any existing interval
+    if (durationIntervalRef.current) {
+      clearInterval(durationIntervalRef.current);
+    }
+
+    // Start interval to update duration every second
+    durationIntervalRef.current = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - callAnsweredTimeRef.current) / 1000);
+      console.log('⏱️ Updating duration:', elapsed);
+      setState((p) => ({ ...p, callDuration: elapsed }));
+    }, 1000);
+
+    console.log('⏱️ Duration timer started');
+  }, []);
+
+  /**
+   * Stop duration timer
+   */
+  const stopDurationTimer = useCallback(() => {
+    if (durationIntervalRef.current) {
+      clearInterval(durationIntervalRef.current);
+      durationIntervalRef.current = null;
+    }
+    callAnsweredTimeRef.current = 0;
+  }, []);
 
   /**
    * Initialize application
@@ -162,9 +199,6 @@ export const App: React.FC = () => {
     console.log('🔌 Connecting to WebSocket for incoming calls...');
     websocketService.connect(hubspot.userId.toString());
 
-    let durationInterval: NodeJS.Timeout | null = null;
-    let callAnsweredTime: number = 0;
-
     const unsubscribeIncoming = websocketService.onIncomingCall((data: IncomingCallData) => {
       console.log('📥 Incoming call received:', data);
 
@@ -194,7 +228,7 @@ export const App: React.FC = () => {
       // Call completed - handled in endCall function
     });
 
-    // Listen for when WhatsApp user picks up the call
+    // Listen for when WhatsApp user picks up the call (OUTBOUND calls only)
     const unsubscribeAnswered = websocketService.onCallAnswered((data: any) => {
       console.log('✅ WhatsApp user answered the call:', data);
 
@@ -220,22 +254,8 @@ export const App: React.FC = () => {
           hubspot.callAnswered(prev.callSid);
         }
 
-        // Start duration timer
-        callAnsweredTime = Date.now();
-
-        // Clear any existing interval
-        if (durationInterval) {
-          clearInterval(durationInterval);
-        }
-
-        // Start interval to update duration every second
-        durationInterval = setInterval(() => {
-          const elapsed = Math.floor((Date.now() - callAnsweredTime) / 1000);
-          console.log('⏱️ Updating duration:', elapsed);
-          setState((p) => ({ ...p, callDuration: elapsed }));
-        }, 1000);
-
-        console.log('⏱️ Duration timer started');
+        // Start duration timer (for outbound calls)
+        startDurationTimer(prev.callSid!);
 
         return {
           ...prev,
@@ -252,11 +272,9 @@ export const App: React.FC = () => {
       websocketService.disconnect();
 
       // Clean up duration timer
-      if (durationInterval) {
-        clearInterval(durationInterval);
-      }
+      stopDurationTimer();
     };
-  }, [hubspot.isLoggedIn, hubspot.userId, hubspot.notifyIncomingCall, hubspot.callAnswered, timer]);
+  }, [hubspot.isLoggedIn, hubspot.userId, hubspot.notifyIncomingCall, hubspot.callAnswered, timer, startDurationTimer, stopDurationTimer]);
 
   /**
    * Initialize WebRTC Device
@@ -321,20 +339,41 @@ export const App: React.FC = () => {
 
             case 'connected':
               // WebRTC connected (browser ↔ Twilio audio stream established)
-              // NOTE: This does NOT mean WhatsApp user picked up yet!
-              // We'll get a WebSocket 'call_answered' event when that happens
               console.log('🔊 WebRTC audio stream connected to Twilio');
 
-              // Update call duration from WebRTC service
-              setState((prev) => ({
-                ...prev,
-                callDuration: event.duration || 0,
-              }));
+              setState((prev) => {
+                // For INCOMING calls: WhatsApp user is already on the line, so show Connected immediately
+                // For OUTBOUND calls: WhatsApp user hasn't picked up yet, wait for call_answered event
+                if (prev.callDirection === 'inbound') {
+                  console.log('✅ Incoming call connected - WhatsApp user is on the line');
+
+                  // Start duration timer for incoming calls
+                  timer.start();
+                  if (prev.callSid) {
+                    startDurationTimer(prev.callSid);
+                    // Notify HubSpot that call was answered
+                    hubspot.callAnswered(prev.callSid);
+                  }
+
+                  return {
+                    ...prev,
+                    isCallConnected: true,
+                    callDuration: 0,
+                  };
+                }
+
+                // Outbound call - keep showing "Ringing..." until WhatsApp user picks up
+                return {
+                  ...prev,
+                  callDuration: event.duration || 0,
+                };
+              });
               break;
 
             case 'ended':
               // Call ended - get callSid and engagementId from state
               timer.stop();
+              stopDurationTimer();
               setState((prev) => {
                 // Call hubspot.callEnded with proper data
                 if (prev.callSid && prev.engagementId) {
@@ -361,6 +400,7 @@ export const App: React.FC = () => {
               // Call error
               console.error('WebRTC Call Error:', event.error);
               timer.stop();
+              stopDurationTimer();
               setState((prev) => {
                 // Call hubspot.callEnded with proper data
                 if (prev.callSid && prev.engagementId) {
@@ -397,9 +437,10 @@ export const App: React.FC = () => {
     return () => {
       console.log('🧹 Cleaning up WebRTC');
       isActive = false;
+      stopDurationTimer();
       webrtcService.destroy().catch(console.error);
     };
-  }, [hubspot.isLoggedIn, hubspot.userId]);
+  }, [hubspot.isLoggedIn, hubspot.userId, startDurationTimer, stopDurationTimer, hubspot.callAnswered, timer]);
 
   /**
    * Handle user login
