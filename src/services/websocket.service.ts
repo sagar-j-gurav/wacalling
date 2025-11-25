@@ -39,7 +39,7 @@ class WebSocketService {
     console.log(`Connecting to WebSocket: ${this.websocketUrl}`);
 
     this.socket = io(this.websocketUrl, {
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'], // Try polling first, then upgrade to websocket
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
