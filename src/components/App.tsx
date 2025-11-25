@@ -274,7 +274,8 @@ export const App: React.FC = () => {
       // Clean up duration timer
       stopDurationTimer();
     };
-  }, [hubspot.isLoggedIn, hubspot.userId, hubspot.notifyIncomingCall, hubspot.callAnswered, timer, startDurationTimer, stopDurationTimer]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hubspot.isLoggedIn, hubspot.userId, startDurationTimer, stopDurationTimer]);
 
   /**
    * Initialize WebRTC Device
@@ -440,7 +441,8 @@ export const App: React.FC = () => {
       stopDurationTimer();
       webrtcService.destroy().catch(console.error);
     };
-  }, [hubspot.isLoggedIn, hubspot.userId, startDurationTimer, stopDurationTimer, hubspot.callAnswered, timer]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hubspot.isLoggedIn, hubspot.userId, startDurationTimer, stopDurationTimer]);
 
   /**
    * Handle user login
