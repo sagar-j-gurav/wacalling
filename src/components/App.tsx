@@ -286,21 +286,35 @@ export const App: React.FC = () => {
               break;
 
             case 'ringing':
-              // Call is ringing (contact's phone)
-              // Update callSid with actual Twilio CallSid (now available)
+              // Ringing event can be for:
+              // 1. Outbound call - We called someone, their phone is ringing
+              // 2. Incoming call - WebRTC call arrived (but we haven't accepted yet)
               setState((prev) => {
                 const twilioCallSid = event.call?.parameters?.CallSid;
                 if (twilioCallSid && twilioCallSid !== prev.callSid) {
                   console.log('🔄 Updating callSid on ringing:', {
                     from: prev.callSid,
                     to: twilioCallSid,
+                    direction: prev.callDirection,
                   });
                 }
+
+                // For INCOMING calls, stay on INCOMING screen (don't auto-switch to CALLING)
+                // User needs to manually accept first
+                if (prev.callDirection === 'inbound') {
+                  console.log('📞 Incoming call - staying on INCOMING screen');
+                  return {
+                    ...prev,
+                    callSid: twilioCallSid || prev.callSid,
+                  };
+                }
+
+                // For OUTBOUND calls, show CALLING screen
                 return {
                   ...prev,
                   currentScreen: 'CALLING',
                   isCallConnected: false, // Ringing, not connected yet
-                  callSid: twilioCallSid || prev.callSid, // Update with real CallSid
+                  callSid: twilioCallSid || prev.callSid,
                 };
               });
               break;
