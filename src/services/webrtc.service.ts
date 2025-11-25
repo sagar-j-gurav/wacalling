@@ -195,12 +195,20 @@ class WebRTCService {
    */
   private startCallDurationTimer(): void {
     this.stopCallDurationTimer();
-    this.callDurationInterval = setInterval(() => {
+
+    // Emit duration update function
+    const emitDuration = () => {
       if (this.callStartTime) {
         const duration = Math.floor((Date.now() - this.callStartTime) / 1000);
         this.emitCallStatus({ status: 'connected', call: this.activeCall || undefined, duration });
       }
-    }, 1000);
+    };
+
+    // Emit first update immediately (00:00)
+    emitDuration();
+
+    // Start interval timer for subsequent updates every second
+    this.callDurationInterval = setInterval(emitDuration, 1000);
   }
 
   /**
