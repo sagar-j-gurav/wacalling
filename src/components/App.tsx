@@ -188,23 +188,43 @@ export const App: React.FC = () => {
     const unsubscribeStatus = websocketService.onCallStatusUpdate((data: any) => {
       console.log('📞 Call status update:', data);
 
-      const { callSid, status } = data;
-
-      // Call answered - notify HubSpot SDK
-      if ((status === 'in-progress' || status === 'answered') && callSid === state.callSid) {
-        console.log('✅ Call actually answered - notifying HubSpot SDK');
-        hubspot.callAnswered(callSid);
-      }
-
       // Call completed - handled in endCall function
+    });
+
+    // Listen for when WhatsApp user picks up the call
+    const unsubscribeAnswered = websocketService.onCallAnswered((data: any) => {
+      console.log('✅ WhatsApp user answered the call:', data);
+
+      setState((prev) => {
+        // Only process if this is our current call
+        if (data.callSid !== prev.callSid) {
+          console.log('⚠️ Call answered event for different call, ignoring');
+          return prev;
+        }
+
+        // Start the timer NOW (when WhatsApp user actually picks up)
+        timer.start();
+
+        // Notify HubSpot that call was answered
+        if (prev.callSid) {
+          hubspot.callAnswered(prev.callSid);
+        }
+
+        return {
+          ...prev,
+          isCallConnected: true, // NOW show "Connected"!
+          callDuration: 0, // Start from 0
+        };
+      });
     });
 
     return () => {
       unsubscribeIncoming();
       unsubscribeStatus();
+      unsubscribeAnswered();
       websocketService.disconnect();
     };
-  }, [hubspot.isLoggedIn, hubspot.userId, hubspot.notifyIncomingCall, hubspot.callAnswered, state.callSid]);
+  }, [hubspot.isLoggedIn, hubspot.userId, hubspot.notifyIncomingCall, hubspot.callAnswered, state.callSid, timer]);
 
   /**
    * Initialize WebRTC Device
@@ -243,22 +263,16 @@ export const App: React.FC = () => {
               break;
 
             case 'connected':
-              // Call connected - both parties can talk
-              timer.start();
+              // WebRTC connected (browser ↔ Twilio audio stream established)
+              // NOTE: This does NOT mean WhatsApp user picked up yet!
+              // We'll get a WebSocket 'call_answered' event when that happens
+              console.log('🔊 WebRTC audio stream connected to Twilio');
 
-              // Update call duration from WebRTC service and notify HubSpot
-              setState((prev) => {
-                // Notify HubSpot that call was answered
-                if (prev.callSid) {
-                  hubspot.callAnswered(prev.callSid);
-                }
-
-                return {
-                  ...prev,
-                  isCallConnected: true, // Now connected!
-                  callDuration: event.duration || 0,
-                };
-              });
+              // Update call duration from WebRTC service
+              setState((prev) => ({
+                ...prev,
+                callDuration: event.duration || 0,
+              }));
               break;
 
             case 'ended':

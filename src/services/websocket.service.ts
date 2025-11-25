@@ -7,6 +7,7 @@ import { IncomingCallData } from '../types';
 
 type IncomingCallHandler = (data: IncomingCallData) => void;
 type CallStatusUpdateHandler = (data: { callSid: string; status: string; duration?: string }) => void;
+type CallAnsweredHandler = (data: { callSid: string; status: string }) => void;
 type DisconnectHandler = () => void;
 type ConnectHandler = () => void;
 
@@ -15,6 +16,7 @@ class WebSocketService {
   private websocketUrl: string;
   private incomingCallHandlers: Set<IncomingCallHandler> = new Set();
   private callStatusUpdateHandlers: Set<CallStatusUpdateHandler> = new Set();
+  private callAnsweredHandlers: Set<CallAnsweredHandler> = new Set();
   private connectHandlers: Set<ConnectHandler> = new Set();
   private disconnectHandlers: Set<DisconnectHandler> = new Set();
   private ownerId: string | null = null;
@@ -93,6 +95,12 @@ class WebSocketService {
       console.log('📊 Call status update:', data);
       this.callStatusUpdateHandlers.forEach((handler) => handler(data));
     });
+
+    // Listen for call answered events (when WhatsApp user picks up)
+    this.socket.on('call_answered', (data: { callSid: string; status: string }) => {
+      console.log('✅ Call answered by WhatsApp user:', data);
+      this.callAnsweredHandlers.forEach((handler) => handler(data));
+    });
   }
 
   /**
@@ -136,6 +144,18 @@ class WebSocketService {
     // Return unsubscribe function
     return () => {
       this.callStatusUpdateHandlers.delete(handler);
+    };
+  }
+
+  /**
+   * Register call answered handler (when WhatsApp user picks up)
+   */
+  onCallAnswered(handler: CallAnsweredHandler): () => void {
+    this.callAnsweredHandlers.add(handler);
+
+    // Return unsubscribe function
+    return () => {
+      this.callAnsweredHandlers.delete(handler);
     };
   }
 
