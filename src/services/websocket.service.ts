@@ -43,6 +43,14 @@ class WebSocketService {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      forceNew: true,
+      withCredentials: false,
+      autoConnect: true,
+      upgrade: true,
+      rejectUnauthorized: false, // Only for development, remove in production with valid certs
+      extraHeaders: {
+        'Access-Control-Allow-Origin': '*'
+      }
     });
 
     this.socket.on('connect', () => {
