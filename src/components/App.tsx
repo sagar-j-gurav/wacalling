@@ -207,12 +207,14 @@ export const App: React.FC = () => {
       // Notify HubSpot SDK (this will open the popup window if in embedded widget)
       hubspot.notifyIncomingCall(data);
 
-      // IMPORTANT: Only show incoming call UI if:
-      // 1. We're in the popup window (iframeLocation === 'window'), OR
-      // 2. iframeLocation is null (dev mode / standalone)
-      // If we're in embedded widget, HubSpot will open a popup - don't show UI here
-      if (hubspot.iframeLocation === 'widget') {
-        console.log('📍 Embedded widget - letting popup handle incoming call UI');
+      // IMPORTANT: Only show incoming call UI if we're in the popup window
+      // HubSpot iframeLocation values:
+      //   'window' - Popup window (show incoming call UI HERE)
+      //   'widget' - Embedded iframe in CRM (don't show UI)
+      //   'remote' - Cross-tab communication mode (don't show UI - popup handles it)
+      //   null     - Dev mode / standalone (show UI for testing)
+      if (hubspot.iframeLocation === 'widget' || hubspot.iframeLocation === 'remote') {
+        console.log(`📍 ${hubspot.iframeLocation} mode - letting popup window handle incoming call UI`);
         return;  // Let the popup window handle the incoming call UI
       }
 

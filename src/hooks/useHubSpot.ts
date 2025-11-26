@@ -18,7 +18,7 @@ interface HubSpotState {
   dialedNumber: string | null;
   contactId: string | null;
   contactType: 'CONTACT' | 'COMPANY' | null;
-  iframeLocation: 'widget' | 'window' | null;  // 'widget' = embedded, 'window' = popup
+  iframeLocation: 'widget' | 'window' | 'remote' | null;  // 'widget' = embedded, 'window' = popup, 'remote' = cross-tab
 }
 
 export const useHubSpot = () => {

@@ -21,7 +21,7 @@ type ReadyHandler = (data: {
   portalId: number;
   engagementId?: number;
   userId?: number;
-  iframeLocation?: 'widget' | 'window';  // 'widget' = embedded iframe, 'window' = popup
+  iframeLocation?: 'widget' | 'window' | 'remote';  // 'widget' = embedded, 'window' = popup, 'remote' = cross-tab
   usesCallingWindow?: boolean;
 }) => void;
 type DialNumberHandler = (data: {
@@ -46,7 +46,7 @@ class HubSpotService {
   private sdk: ICallingExtensions | null = null;
   private portalId: number | null = null;
   private userId: number | null = null;
-  private iframeLocation: 'widget' | 'window' | null = null;  // Track if we're in embedded widget or popup window
+  private iframeLocation: 'widget' | 'window' | 'remote' | null = null;  // Track location: widget=embedded, window=popup, remote=cross-tab
 
   // Event handlers
   private readyHandlers: Set<ReadyHandler> = new Set();
@@ -99,7 +99,7 @@ class HubSpotService {
     portalId: number;
     engagementId?: number;
     userId?: number;
-    iframeLocation?: 'widget' | 'window';
+    iframeLocation?: 'widget' | 'window' | 'remote';
     usesCallingWindow?: boolean;
   }) {
     console.log('📡 HubSpot SDK Ready:', data);
@@ -298,10 +298,10 @@ class HubSpotService {
   }
 
   /**
-   * Get iframe location - 'widget' for embedded iframe, 'window' for popup
+   * Get iframe location - 'widget' for embedded, 'window' for popup, 'remote' for cross-tab
    * Use this to determine if incoming calls should be handled here
    */
-  getIframeLocation(): 'widget' | 'window' | null {
+  getIframeLocation(): 'widget' | 'window' | 'remote' | null {
     return this.iframeLocation;
   }
 
