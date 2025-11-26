@@ -1,10 +1,13 @@
 /**
  * HubSpot SDK Service - Calling Extensions Integration
+ *
+ * Uses singleton pattern following official HubSpot demo:
+ * https://github.com/HubSpot/calling-extensions-sdk/blob/master/demos/demo-react-ts/src/hooks/useCti.ts
  */
 
 import CallingExtensions from '@hubspot/calling-extensions-sdk';
 
-// Type definition fr CallingExtensions instance
+// Type definition for CallingExtensions instance
 type ICallingExtensions = InstanceType<typeof CallingExtensions>;
 import {
   HubSpotUserInfo,
@@ -29,9 +32,12 @@ type DialNumberHandler = (data: {
 type EngagementCreatedHandler = (data: { engagementId: number }) => void;
 type CallerIdMatchHandler = (data: any) => void;
 
+// Module-level singleton instance - ensures only ONE CallingExtensions is ever created
+let sdkInstance: ICallingExtensions | null = null;
+let isSDKInitialized = false;
+
 class HubSpotService {
   private sdk: ICallingExtensions | null = null;
-  private isInitialized: boolean = false;
   private portalId: number | null = null;
   private userId: number | null = null;
 
@@ -42,15 +48,18 @@ class HubSpotService {
   private callerIdMatchHandlers: Set<CallerIdMatchHandler> = new Set();
 
   /**
-   * Initialize HubSpot SDK
+   * Initialize HubSpot SDK - uses module-level singleton to ensure only one instance
+   * This prevents double initialization even with React StrictMode
    */
   initialize(): void {
-    if (this.isInitialized) {
-      console.log('HubSpot SDK already initialized');
+    // Use module-level guard to ensure SDK is created only once
+    if (isSDKInitialized && sdkInstance) {
+      console.log('HubSpot SDK already initialized (singleton)');
+      this.sdk = sdkInstance;
       return;
     }
 
-    console.log('Initializing HubSpot SDK...');
+    console.log('Initializing HubSpot SDK (first time)...');
 
     const options = {
       debugMode: process.env.NODE_ENV === 'development',
@@ -66,10 +75,13 @@ class HubSpotService {
       },
     };
 
-    this.sdk = new CallingExtensions(options);
-    this.isInitialized = true;
+    // Create SDK only once at module level
+    // Cast to any to handle partial event handlers (SDK accepts partial handlers)
+    sdkInstance = new CallingExtensions(options as any);
+    isSDKInitialized = true;
+    this.sdk = sdkInstance;
 
-    console.log('✅ HubSpot SDK initialized');
+    console.log('✅ HubSpot SDK initialized (singleton created)');
   }
 
   /**
@@ -270,7 +282,7 @@ class HubSpotService {
   }
 
   isReady(): boolean {
-    return this.isInitialized && this.sdk !== null;
+    return isSDKInitialized && this.sdk !== null;
   }
 }
 

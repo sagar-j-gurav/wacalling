@@ -1,8 +1,11 @@
 /**
  * HubSpot SDK Integration Hook
+ *
+ * Follows official HubSpot demo pattern to ensure only one widget is initialized:
+ * https://github.com/HubSpot/calling-extensions-sdk/blob/master/demos/demo-react-ts/src/hooks/useCti.ts
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import hubspotService from '../services/hubspot.service';
 import { HubSpotUserInfo, OutgoingCallInfo, IncomingCallData } from '../types';
 
@@ -29,15 +32,25 @@ export const useHubSpot = () => {
     contactType: null,
   });
 
+  // Track if this hook instance has initialized to prevent double initialization in StrictMode
+  const isInitializedRef = useRef(false);
+
   /**
-   * Initialize HubSpot SDK
+   * Initialize HubSpot SDK - only once even with React StrictMode
    */
   useEffect(() => {
+    // Prevent double initialization from React StrictMode
+    if (isInitializedRef.current) {
+      console.log('🔄 HubSpot hook already initialized (StrictMode re-mount)');
+      return;
+    }
+    isInitializedRef.current = true;
+
     console.log('🚀 Initializing HubSpot SDK...');
     hubspotService.initialize();
 
     // Listen for ready event
-    const unsubscribeReady = hubspotService.onReady((data) => {
+    hubspotService.onReady((data) => {
       console.log('✅ HubSpot SDK Ready:', data);
       setState((prev) => ({
         ...prev,
@@ -49,7 +62,7 @@ export const useHubSpot = () => {
     });
 
     // Listen for dial number events (click-to-call from contact records)
-    const unsubscribeDialNumber = hubspotService.onDialNumber((data) => {
+    hubspotService.onDialNumber((data) => {
       console.log('📞 Dial Number Event with Full Context:', data);
       setState((prev) => ({
         ...prev,
@@ -60,7 +73,7 @@ export const useHubSpot = () => {
     });
 
     // Listen for engagement created events
-    const unsubscribeEngagement = hubspotService.onEngagementCreated((data) => {
+    hubspotService.onEngagementCreated((data) => {
       console.log('📝 Engagement Created:', data);
       setState((prev) => ({
         ...prev,
@@ -68,11 +81,10 @@ export const useHubSpot = () => {
       }));
     });
 
-    return () => {
-      unsubscribeReady();
-      unsubscribeDialNumber();
-      unsubscribeEngagement();
-    };
+    // Note: We don't unsubscribe because:
+    // 1. The service is a singleton that persists across re-mounts
+    // 2. The handlers Set in the service prevents duplicate listeners
+    // 3. The isInitializedRef guard prevents re-adding listeners on StrictMode re-mount
   }, []);
 
   /**
