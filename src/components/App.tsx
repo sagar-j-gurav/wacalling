@@ -193,9 +193,17 @@ export const App: React.FC = () => {
 
   /**
    * Setup WebSocket for incoming calls and call status updates
+   * IMPORTANT: Only connect in popup window ('window') or dev mode (null)
+   * In embedded widget ('remote'/'widget'), the popup handles incoming calls
    */
   useEffect(() => {
     if (!hubspot.isLoggedIn || !hubspot.userId) return;
+
+    // Skip WebSocket in embedded widget - let popup window handle incoming calls
+    if (hubspot.iframeLocation === 'remote' || hubspot.iframeLocation === 'widget') {
+      console.log(`📍 Skipping WebSocket in ${hubspot.iframeLocation} mode - popup handles incoming calls`);
+      return;
+    }
 
     console.log('🔌 Connecting to WebSocket for incoming calls...');
     websocketService.connect(hubspot.userId.toString());
@@ -300,13 +308,21 @@ export const App: React.FC = () => {
       stopDurationTimer();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hubspot.isLoggedIn, hubspot.userId, startDurationTimer, stopDurationTimer]);
+  }, [hubspot.isLoggedIn, hubspot.userId, hubspot.iframeLocation, startDurationTimer, stopDurationTimer]);
 
   /**
    * Initialize WebRTC Device
+   * IMPORTANT: Only initialize in popup window ('window') or dev mode (null)
+   * In embedded widget ('remote'/'widget'), the popup handles WebRTC
    */
   useEffect(() => {
     if (!hubspot.isLoggedIn || !hubspot.userId) return;
+
+    // Skip WebRTC in embedded widget - let popup window handle it
+    if (hubspot.iframeLocation === 'remote' || hubspot.iframeLocation === 'widget') {
+      console.log(`📍 Skipping WebRTC init in ${hubspot.iframeLocation} mode - popup handles calls`);
+      return;
+    }
 
     let isActive = true;
 
@@ -467,7 +483,7 @@ export const App: React.FC = () => {
       webrtcService.destroy().catch(console.error);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hubspot.isLoggedIn, hubspot.userId, startDurationTimer, stopDurationTimer]);
+  }, [hubspot.isLoggedIn, hubspot.userId, hubspot.iframeLocation, startDurationTimer, stopDurationTimer]);
 
   /**
    * Handle user login
