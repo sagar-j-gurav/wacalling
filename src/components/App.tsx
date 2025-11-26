@@ -361,23 +361,14 @@ export const App: React.FC = () => {
               console.log('🔊 WebRTC audio stream connected to Twilio');
 
               setState((prev) => {
-                // For INCOMING calls: WhatsApp user is already on the line, so show Connected immediately
-                // For OUTBOUND calls: WhatsApp user hasn't picked up yet, wait for call_answered event
+                // For INCOMING calls: Already handled in handleAcceptIncomingCall
+                // We set isCallConnected: true and started the timer there
                 if (prev.callDirection === 'inbound') {
-                  console.log('✅ Incoming call connected - WhatsApp user is on the line');
-
-                  // Start duration timer for incoming calls
-                  timer.start();
-                  if (prev.callSid) {
-                    startDurationTimer(prev.callSid);
-                    // Notify HubSpot that call was answered
-                    hubspot.callAnswered(prev.callSid);
-                  }
-
+                  console.log('✅ Incoming call WebRTC connected (timer already started in accept handler)');
+                  // Don't duplicate - just confirm connected state
                   return {
                     ...prev,
                     isCallConnected: true,
-                    callDuration: 0,
                   };
                 }
 
@@ -813,9 +804,14 @@ export const App: React.FC = () => {
    * Handle incoming call accept
    */
   const handleAcceptIncomingCall = useCallback(() => {
-    if (!state.callSid || !state.engagementId) return;
+    // Only require callSid - engagementId may come later from HubSpot
+    if (!state.callSid) {
+      console.error('❌ No callSid available to accept call');
+      return;
+    }
 
     console.log('👍 Owner accepting incoming call...');
+    console.log('📍 callSid:', state.callSid, 'engagementId:', state.engagementId);
 
     // Clear notification and reset title
     notificationService.closeIncomingCallNotification();
@@ -823,16 +819,23 @@ export const App: React.FC = () => {
     // Accept the WebRTC call
     webrtcService.acceptIncomingCall();
 
+    // For INCOMING calls, the WhatsApp user is ALREADY on the line waiting for us.
+    // So when we accept, the audio connects immediately - show "Connected" right away.
+    // Start the duration timer immediately since the call is live.
+    timer.start();
+    startDurationTimer(state.callSid);
+
+    // Notify HubSpot that call was answered
+    hubspot.callAnswered(state.callSid);
+
     setState((prev) => ({
       ...prev,
       currentScreen: 'CALLING',
       isCallActive: true,
-      isCallConnected: false, // Not yet connected - ringing WhatsApp user
+      isCallConnected: true, // Immediately connected - WhatsApp user is already on the line
+      callDuration: 0,
     }));
-
-    // Note: Don't call hubspot.callAnswered() here - wait for WhatsApp user to pick up
-    // The call_answered WebSocket event will trigger when that happens
-  }, [state.callSid, state.engagementId]);
+  }, [state.callSid, state.engagementId, hubspot, timer, startDurationTimer]);
 
   /**
    * Handle incoming call reject
