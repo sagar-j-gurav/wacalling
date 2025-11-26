@@ -22,27 +22,33 @@ export const IncomingScreen: React.FC<IncomingScreenProps> = ({
   return (
     <Screen style={{ justifyContent: 'center' }}>
       <Card style={{
-        background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryHover} 100%)`,
-        color: 'white',
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)'
+        backgroundColor: colors.white,
+        border: `3px solid ${colors.primary}`,
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+        borderRadius: '12px'
       }}>
         <Column gap={24}>
           <Column gap={12} style={{ alignItems: 'center' }}>
-            <Badge color="success" style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', color: colors.primary }}>
+            <Badge color="success" style={{
+              backgroundColor: colors.primary,
+              color: colors.white,
+              padding: '6px 16px',
+              fontSize: '13px'
+            }}>
               Incoming Call
             </Badge>
-            <Text size={14} color="white">
-              WhatsApp Call
+            <Text size={13} color={colors.textLight}>
+              WhatsApp Voice Call
             </Text>
           </Column>
 
           <Column gap={8} style={{ alignItems: 'center' }}>
             {contactName && (
-              <Text size={20} weight={600} color="white">
+              <Text size={22} weight={600} color={colors.text}>
                 {contactName}
               </Text>
             )}
-            <Text size={18} weight={500} color="white">
+            <Text size={18} weight={500} color={colors.primary}>
               {formatPhoneNumber(fromNumber)}
             </Text>
           </Column>
