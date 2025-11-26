@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Screen, Card, Button, Text, Column, Spacer, Alert } from '../StyledComponents';
+import { Screen, Card, Button, Text, Column, Spacer, Alert, colors } from '../StyledComponents';
 import { formatPhoneNumber } from '../../utils/formatters';
 
 interface PermissionRequestScreenProps {
@@ -39,12 +39,12 @@ export const PermissionRequestScreen: React.FC<PermissionRequestScreenProps> = (
             </Text>
           </Column>
 
-          <Card style={{ backgroundColor: '#F5F8FA', padding: '16px' }}>
+          <Card style={{ backgroundColor: colors.background, padding: '16px' }}>
             <Column gap={8}>
               <Text size={14} weight={500}>
                 Calling:
               </Text>
-              <Text size={16} weight={600} color="#007A5A">
+              <Text size={16} weight={600} color={colors.primary}>
                 {formatPhoneNumber(phoneNumber)}
               </Text>
             </Column>

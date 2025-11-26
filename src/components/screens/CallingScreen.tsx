@@ -13,6 +13,7 @@ import {
   Row,
   Spacer,
   Badge,
+  colors,
 } from '../StyledComponents';
 import { formatPhoneNumber } from '../../utils/formatters';
 
@@ -67,7 +68,7 @@ export const CallingScreen: React.FC<CallingScreenProps> = ({
                 {contactName}
               </Text>
             )}
-            <Text size={18} weight={500} color="#007A5A">
+            <Text size={18} weight={500} color={colors.primary}>
               {formatPhoneNumber(phoneNumber)}
             </Text>
           </Column>

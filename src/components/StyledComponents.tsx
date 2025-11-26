@@ -4,19 +4,19 @@
 
 import styled from 'styled-components';
 
-// ========== Theme Colors ==========
+// ========== Theme Colors (HubSpot Brand) ==========
 export const colors = {
-  primary: '#007A5A',
-  primaryHover: '#006644',
-  secondary: '#FF5C35',
-  success: '#2BAC76',
-  danger: '#E8384F',
-  warning: '#F7B500',
-  text: '#33475B',
-  textLight: '#7C98B6',
-  background: '#F5F8FA',
-  white: '#FFFFFF',
-  border: '#CBD6E2',
+  primary: '#FF7A59',        // HubSpot Orange
+  primaryHover: '#FF5C35',   // Darker Orange
+  secondary: '#00A4BD',      // HubSpot Teal
+  success: '#00BDA5',        // HubSpot Green
+  danger: '#E8384F',         // Error Red
+  warning: '#F7B500',        // Warning Yellow
+  text: '#33475B',           // HubSpot Navy (text)
+  textLight: '#7C98B6',      // Light Gray (secondary text)
+  background: '#F5F8FA',     // Light Background
+  white: '#FFFFFF',          // White
+  border: '#CBD6E2',         // Border Gray
   shadow: 'rgba(0, 0, 0, 0.12)',
 };
 
@@ -80,7 +80,7 @@ export const Button = styled.button<{ variant?: 'primary' | 'secondary' | 'dange
           background-color: ${colors.secondary};
           color: ${colors.white};
           &:hover:not(:disabled) {
-            background-color: #E64A2E;
+            background-color: #008BA3;
           }
         `;
       case 'danger':

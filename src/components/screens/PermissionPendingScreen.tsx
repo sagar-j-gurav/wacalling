@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Screen, Card, Button, Text, Column, Spacer, Badge, Alert } from '../StyledComponents';
+import { Screen, Card, Button, Text, Column, Spacer, Badge, Alert, colors } from '../StyledComponents';
 import { formatPhoneNumber } from '../../utils/formatters';
 
 interface PermissionPendingScreenProps {
@@ -58,12 +58,12 @@ export const PermissionPendingScreen: React.FC<PermissionPendingScreenProps> = (
             </Text>
           </Column>
 
-          <Card style={{ backgroundColor: '#F5F8FA', padding: '16px' }}>
+          <Card style={{ backgroundColor: colors.background, padding: '16px' }}>
             <Column gap={8}>
               <Text size={14} weight={500}>
                 Contact:
               </Text>
-              <Text size={16} weight={600} color="#007A5A">
+              <Text size={16} weight={600} color={colors.primary}>
                 {formatPhoneNumber(phoneNumber)}
               </Text>
             </Column>
