@@ -25,7 +25,7 @@ export const usePermission = () => {
   });
 
   /**
-   * Check if user has permission to call
+   * Check if user haspermission to call
    */
   const checkPermission = useCallback(async (phoneNumber: string) => {
     setState((prev) => ({ ...prev, isChecking: true, error: null }));
