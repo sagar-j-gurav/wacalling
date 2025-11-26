@@ -193,40 +193,22 @@ export const App: React.FC = () => {
 
   /**
    * Setup WebSocket for incoming calls and call status updates
-   * IMPORTANT: Only connect in popup window ('window') or dev mode (null)
-   * In embedded widget ('remote'/'widget'), the popup handles incoming calls
+   * Widget-only approach: Handle all calls (incoming + outbound) in the embedded widget
    */
   useEffect(() => {
     if (!hubspot.isLoggedIn || !hubspot.userId) return;
 
-    // Skip WebSocket in embedded widget - let popup window handle incoming calls
-    if (hubspot.iframeLocation === 'remote' || hubspot.iframeLocation === 'widget') {
-      console.log(`📍 Skipping WebSocket in ${hubspot.iframeLocation} mode - popup handles incoming calls`);
-      return;
-    }
-
     console.log('🔌 Connecting to WebSocket for incoming calls...');
+    console.log('📍 iframeLocation:', hubspot.iframeLocation);
     websocketService.connect(hubspot.userId.toString());
 
     const unsubscribeIncoming = websocketService.onIncomingCall((data: IncomingCallData) => {
       console.log('📥 Incoming call received:', data);
       console.log('📍 Current iframeLocation:', hubspot.iframeLocation);
 
-      // Notify HubSpot SDK (this will open the popup window if in embedded widget)
-      hubspot.notifyIncomingCall(data);
-
-      // IMPORTANT: Only show incoming call UI if we're in the popup window
-      // HubSpot iframeLocation values:
-      //   'window' - Popup window (show incoming call UI HERE)
-      //   'widget' - Embedded iframe in CRM (don't show UI)
-      //   'remote' - Cross-tab communication mode (don't show UI - popup handles it)
-      //   null     - Dev mode / standalone (show UI for testing)
-      if (hubspot.iframeLocation === 'widget' || hubspot.iframeLocation === 'remote') {
-        console.log(`📍 ${hubspot.iframeLocation} mode - letting popup window handle incoming call UI`);
-        return;  // Let the popup window handle the incoming call UI
-      }
-
-      console.log('📍 Showing incoming call UI (popup window or dev mode)');
+      // Widget-only approach: Do NOT call hubspot.notifyIncomingCall()
+      // That would open the popup window. Instead, handle everything in this widget.
+      console.log('📍 Widget-only mode - handling incoming call in embedded widget');
 
       // Show browser notification (works even when tab is in background)
       notificationService.showIncomingCallNotification(
@@ -312,17 +294,12 @@ export const App: React.FC = () => {
 
   /**
    * Initialize WebRTC Device
-   * IMPORTANT: Only initialize in popup window ('window') or dev mode (null)
-   * In embedded widget ('remote'/'widget'), the popup handles WebRTC
+   * Widget-only approach: Handle all calls (incoming + outbound) in the embedded widget
    */
   useEffect(() => {
     if (!hubspot.isLoggedIn || !hubspot.userId) return;
 
-    // Skip WebRTC in embedded widget - let popup window handle it
-    if (hubspot.iframeLocation === 'remote' || hubspot.iframeLocation === 'widget') {
-      console.log(`📍 Skipping WebRTC init in ${hubspot.iframeLocation} mode - popup handles calls`);
-      return;
-    }
+    console.log('📍 Initializing WebRTC in', hubspot.iframeLocation || 'standalone', 'mode');
 
     let isActive = true;
 
