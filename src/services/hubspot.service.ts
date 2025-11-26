@@ -17,7 +17,13 @@ import {
   IncomingCallData,
 } from '../types';
 
-type ReadyHandler = (data: { portalId: number; engagementId?: number; userId?: number }) => void;
+type ReadyHandler = (data: {
+  portalId: number;
+  engagementId?: number;
+  userId?: number;
+  iframeLocation?: 'widget' | 'window';  // 'widget' = embedded iframe, 'window' = popup
+  usesCallingWindow?: boolean;
+}) => void;
 type DialNumberHandler = (data: {
   phoneNumber: string;
   objectId?: number;
@@ -40,6 +46,7 @@ class HubSpotService {
   private sdk: ICallingExtensions | null = null;
   private portalId: number | null = null;
   private userId: number | null = null;
+  private iframeLocation: 'widget' | 'window' | null = null;  // Track if we're in embedded widget or popup window
 
   // Event handlers
   private readyHandlers: Set<ReadyHandler> = new Set();
@@ -88,16 +95,25 @@ class HubSpotService {
    * Event Handlers
    */
 
-  private handleReady(data: { portalId: number; engagementId?: number; userId?: number }) {
+  private handleReady(data: {
+    portalId: number;
+    engagementId?: number;
+    userId?: number;
+    iframeLocation?: 'widget' | 'window';
+    usesCallingWindow?: boolean;
+  }) {
     console.log('📡 HubSpot SDK Ready:', data);
+    console.log('📍 iframeLocation:', data.iframeLocation);  // 'widget' = embedded, 'window' = popup
+
     this.portalId = data.portalId;
     this.userId = data.userId || null;
+    this.iframeLocation = data.iframeLocation || null;
 
     // Notify SDK that widget is initialized
     this.sdk?.initialized({
       isLoggedIn: false,
       engagementId: data.engagementId || 0,
-    });
+    } as any);
 
     this.readyHandlers.forEach((handler) => handler(data));
   }
@@ -279,6 +295,28 @@ class HubSpotService {
 
   getUserId(): number | null {
     return this.userId;
+  }
+
+  /**
+   * Get iframe location - 'widget' for embedded iframe, 'window' for popup
+   * Use this to determine if incoming calls should be handled here
+   */
+  getIframeLocation(): 'widget' | 'window' | null {
+    return this.iframeLocation;
+  }
+
+  /**
+   * Check if this instance is running in the popup window (for incoming calls)
+   */
+  isInPopupWindow(): boolean {
+    return this.iframeLocation === 'window';
+  }
+
+  /**
+   * Check if this instance is running in the embedded widget (for outbound calls)
+   */
+  isInEmbeddedWidget(): boolean {
+    return this.iframeLocation === 'widget';
   }
 
   isReady(): boolean {

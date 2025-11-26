@@ -202,9 +202,21 @@ export const App: React.FC = () => {
 
     const unsubscribeIncoming = websocketService.onIncomingCall((data: IncomingCallData) => {
       console.log('📥 Incoming call received:', data);
+      console.log('📍 Current iframeLocation:', hubspot.iframeLocation);
 
-      // Notify HubSpot SDK
+      // Notify HubSpot SDK (this will open the popup window if in embedded widget)
       hubspot.notifyIncomingCall(data);
+
+      // IMPORTANT: Only show incoming call UI if:
+      // 1. We're in the popup window (iframeLocation === 'window'), OR
+      // 2. iframeLocation is null (dev mode / standalone)
+      // If we're in embedded widget, HubSpot will open a popup - don't show UI here
+      if (hubspot.iframeLocation === 'widget') {
+        console.log('📍 Embedded widget - letting popup handle incoming call UI');
+        return;  // Let the popup window handle the incoming call UI
+      }
+
+      console.log('📍 Showing incoming call UI (popup window or dev mode)');
 
       // Show browser notification (works even when tab is in background)
       notificationService.showIncomingCallNotification(

@@ -18,6 +18,7 @@ interface HubSpotState {
   dialedNumber: string | null;
   contactId: string | null;
   contactType: 'CONTACT' | 'COMPANY' | null;
+  iframeLocation: 'widget' | 'window' | null;  // 'widget' = embedded, 'window' = popup
 }
 
 export const useHubSpot = () => {
@@ -30,6 +31,7 @@ export const useHubSpot = () => {
     dialedNumber: null,
     contactId: null,
     contactType: null,
+    iframeLocation: null,
   });
 
   // Track if this hook instance has initialized to prevent double initialization in StrictMode
@@ -52,12 +54,14 @@ export const useHubSpot = () => {
     // Listen for ready event
     hubspotService.onReady((data) => {
       console.log('✅ HubSpot SDK Ready:', data);
+      console.log('📍 iframeLocation:', data.iframeLocation);  // 'widget' = embedded, 'window' = popup
       setState((prev) => ({
         ...prev,
         isReady: true,
         portalId: data.portalId,
         userId: data.userId || null,
         engagementId: data.engagementId || null,
+        iframeLocation: data.iframeLocation || null,
       }));
     });
 
@@ -181,6 +185,20 @@ export const useHubSpot = () => {
     }));
   }, []);
 
+  /**
+   * Check if running in popup window (for incoming calls)
+   */
+  const isInPopupWindow = useCallback(() => {
+    return state.iframeLocation === 'window';
+  }, [state.iframeLocation]);
+
+  /**
+   * Check if running in embedded widget (for outbound calls)
+   */
+  const isInEmbeddedWidget = useCallback(() => {
+    return state.iframeLocation === 'widget';
+  }, [state.iframeLocation]);
+
   return {
     ...state,
     login,
@@ -193,5 +211,7 @@ export const useHubSpot = () => {
     callEnded,
     callCompleted,
     clearDialedNumber,
+    isInPopupWindow,
+    isInEmbeddedWidget,
   };
 };
