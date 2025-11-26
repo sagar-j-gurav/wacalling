@@ -12,6 +12,7 @@ import webrtcService from '../services/webrtc.service';
 import apiService from '../services/api.service';
 import { generateCallId, cleanPhoneNumber, formatDuration } from '../utils/formatters';
 import { storage } from '../utils/storage';
+import { notificationService } from '../utils/notifications';
 import {
   ScreenType,
   IncomingCallData,
@@ -204,6 +205,16 @@ export const App: React.FC = () => {
 
       // Notify HubSpot SDK
       hubspot.notifyIncomingCall(data);
+
+      // Show browser notification (works even when tab is in background)
+      notificationService.showIncomingCallNotification(
+        data.fromNumber,
+        data.contactName,
+        () => {
+          // On notification click, focus window
+          window.focus();
+        }
+      );
 
       // Show incoming call screen
       setState((prev) => ({
@@ -452,6 +463,9 @@ export const App: React.FC = () => {
 
     // Mark that user has seen the welcome screen
     storage.markWelcomeSeen();
+
+    // Request notification permission for incoming calls
+    notificationService.requestPermission();
 
     hubspot.login();
     hubspot.setAvailable();
@@ -796,6 +810,9 @@ export const App: React.FC = () => {
 
     console.log('👍 Owner accepting incoming call...');
 
+    // Clear notification and reset title
+    notificationService.closeIncomingCallNotification();
+
     // Accept the WebRTC call
     webrtcService.acceptIncomingCall();
 
@@ -817,6 +834,9 @@ export const App: React.FC = () => {
     if (!state.callSid || !state.engagementId) return;
 
     console.log('👎 Owner rejecting incoming call...');
+
+    // Clear notification and reset title
+    notificationService.closeIncomingCallNotification();
 
     // Reject the WebRTC call
     webrtcService.rejectIncomingCall();
