@@ -210,6 +210,9 @@ export const App: React.FC = () => {
       // That would open the popup window. Instead, handle everything in this widget.
       console.log('📍 Widget-only mode - handling incoming call in embedded widget');
 
+      // Expand widget to bring it to foreground with Accept/Decline screen
+      hubspot.expandWidget();
+
       // Show browser notification (works even when tab is in background)
       notificationService.showIncomingCallNotification(
         data.fromNumber,

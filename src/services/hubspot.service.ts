@@ -262,6 +262,33 @@ class HubSpotService {
   }
 
   /**
+   * Resize the widget to bring it to the foreground
+   * Use this for incoming calls to make the widget prominent
+   */
+  resizeWidget(width: number, height: number): void {
+    if (!this.sdk) return;
+
+    console.log('📐 Resizing widget to:', { width, height });
+    this.sdk.resizeWidget({ width, height });
+  }
+
+  /**
+   * Expand widget to full size (for incoming calls)
+   */
+  expandWidget(): void {
+    // Standard HubSpot widget expanded size
+    this.resizeWidget(400, 600);
+  }
+
+  /**
+   * Collapse widget to minimized size
+   */
+  collapseWidget(): void {
+    // Standard HubSpot widget collapsed size
+    this.resizeWidget(400, 100);
+  }
+
+  /**
    * Event Listeners
    */
 

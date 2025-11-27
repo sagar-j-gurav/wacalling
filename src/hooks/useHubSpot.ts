@@ -199,6 +199,20 @@ export const useHubSpot = () => {
     return state.iframeLocation === 'widget';
   }, [state.iframeLocation]);
 
+  /**
+   * Expand widget to full size (for incoming calls to bring widget to foreground)
+   */
+  const expandWidget = useCallback(() => {
+    hubspotService.expandWidget();
+  }, []);
+
+  /**
+   * Collapse widget to minimized size
+   */
+  const collapseWidget = useCallback(() => {
+    hubspotService.collapseWidget();
+  }, []);
+
   return {
     ...state,
     login,
@@ -213,5 +227,7 @@ export const useHubSpot = () => {
     clearDialedNumber,
     isInPopupWindow,
     isInEmbeddedWidget,
+    expandWidget,
+    collapseWidget,
   };
 };
