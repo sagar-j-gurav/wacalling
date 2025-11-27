@@ -109,11 +109,21 @@ class HubSpotService {
     this.userId = data.userId || null;
     this.iframeLocation = data.iframeLocation || null;
 
-    // Notify SDK that widget is initialized
+    // Notify SDK that widget is initialized with availability for incoming calls
+    // Setting isAvailable: true is CRITICAL for receiving incoming calls
     this.sdk?.initialized({
-      isLoggedIn: false,
+      isLoggedIn: true,  // Mark as logged in so HubSpot keeps widget active
+      isAvailable: true, // CRITICAL: Mark as available for incoming calls
       engagementId: data.engagementId || 0,
+      sizeInfo: {
+        width: 400,
+        height: 600,
+      },
     } as any);
+
+    // Also explicitly set user as available for incoming calls
+    this.sdk?.userAvailable();
+    console.log('✅ User marked as available for incoming calls');
 
     this.readyHandlers.forEach((handler) => handler(data));
   }
