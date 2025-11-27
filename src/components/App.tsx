@@ -206,11 +206,12 @@ export const App: React.FC = () => {
       console.log('📥 Incoming call received:', data);
       console.log('📍 Current iframeLocation:', hubspot.iframeLocation);
 
-      // Widget-only approach: Do NOT call hubspot.notifyIncomingCall()
-      // That would open the popup window. Instead, handle everything in this widget.
-      console.log('📍 Widget-only mode - handling incoming call in embedded widget');
+      // Notify HubSpot SDK about incoming call - this brings the widget to foreground
+      // HubSpot needs to know about the incoming call to show the widget prominently
+      console.log('📍 Notifying HubSpot SDK about incoming call');
+      hubspot.notifyIncomingCall(data);
 
-      // Expand widget to bring it to foreground with Accept/Decline screen
+      // Also expand widget to ensure it's full size
       hubspot.expandWidget();
 
       // Show browser notification (works even when tab is in background)
